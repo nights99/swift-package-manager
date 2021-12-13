@@ -850,7 +850,10 @@ extension LLBuildManifestBuilder {
 extension LLBuildManifestBuilder {
     private func createProductCommand(_ buildProduct: ProductBuildDescription) throws {
         let cmdName = try buildProduct.product.getCommandName(config: buildConfig)
+        // print("Foo1.3 \(buildProduct.product.name)")
 
+        // assert(false, String(describing: buildProduct.product.type))
+        // print(String(describing: buildProduct.product.type))
         // Create archive tool for static library and shell tool for rest of the products.
         if buildProduct.product.type == .library(.static) {
             manifest.addArchiveCmd(
@@ -914,7 +917,8 @@ extension ResolvedProduct {
         case .library(.static):
             return "\(name)-\(config).a"
         case .library(.automatic):
-            throw InternalError("automatic library not supported")
+            // throw InternalError("automatic library not supported 1")
+            return "\(name)-\(config).dylib"
         case .executable, .snippet:
             return "\(name)-\(config).exe"
         case .plugin:

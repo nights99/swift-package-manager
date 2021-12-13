@@ -296,7 +296,8 @@ public struct BuildParameters: Encodable {
         case .library(.dynamic):
             return RelativePath("\(triple.dynamicLibraryPrefix)\(product.name)\(triple.dynamicLibraryExtension)")
         case .library(.automatic), .plugin:
-            fatalError()
+            // fatalError()
+            return RelativePath("\(triple.dynamicLibraryPrefix)\(product.name)\(triple.dynamicLibraryExtension)")
         case .test:
             guard !triple.isWASI() else {
                 return RelativePath("\(product.name).wasm")
