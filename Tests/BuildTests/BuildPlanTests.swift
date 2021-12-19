@@ -413,7 +413,8 @@ final class BuildPlanTests: XCTestCase {
             observabilityScope: observability.topScope
         ))
 
-        XCTAssertEqual(Set(result.productMap.keys), ["APackageTests"])
+        // XCTAssertEqual(Set(result.productMap.keys), ["APackageTests"])
+        XCTAssertEqual(Set(result.productMap.keys), ["APackageTests", "BLibrary"])
       #if os(macOS)
         XCTAssertEqual(Set(result.targetMap.keys), ["ATarget", "BTarget", "ATargetTests"])
       #else
@@ -525,7 +526,8 @@ final class BuildPlanTests: XCTestCase {
             observabilityScope: observability.topScope
         ))
 
-        result.checkProductsCount(1)
+        // result.checkProductsCount(1)
+        result.checkProductsCount(2)
         result.checkTargetsCount(3)
 
         let ext = try result.target(for: "extlib").clangTarget()
@@ -575,7 +577,7 @@ final class BuildPlanTests: XCTestCase {
       #else
         XCTAssertEqual(try result.buildProduct(for: "exe").linkArguments(), [
             "/fake/path/to/swiftc", "-L", "/path/to/build/debug",
-            "-o", "/path/to/build/debug/exe", "-module-name", "exe", "-emit-executable",
+            "-o", "/path/to/build/debug/exe", "-module-name", "exe", "-lExtPkg", "-emit-executable",
             "-Xlinker", "-rpath=$ORIGIN",
             "@/path/to/build/debug/exe.product/Objects.LinkFileList",
             "-runtime-compatibility-version", "none",
@@ -584,9 +586,14 @@ final class BuildPlanTests: XCTestCase {
       #endif
 
       let linkedFileList = try fs.readFileContents(AbsolutePath("/path/to/build/debug/exe.product/Objects.LinkFileList"))
+    //   XCTAssertEqual(linkedFileList, """
+    //       /path/to/build/debug/exe.build/main.c.o
+    //       /path/to/build/debug/extlib.build/extlib.c.o
+    //       /path/to/build/debug/lib.build/lib.c.o
+
+    //       """)
       XCTAssertEqual(linkedFileList, """
           /path/to/build/debug/exe.build/main.c.o
-          /path/to/build/debug/extlib.build/extlib.c.o
           /path/to/build/debug/lib.build/lib.c.o
 
           """)
@@ -2227,7 +2234,12 @@ final class BuildPlanTests: XCTestCase {
             XCTAssertMatch(exe, [.anySequence, "-DFOO", .end])
 
             let linkExe = try result.buildProduct(for: "exe").linkArguments()
-            XCTAssertMatch(linkExe, [.anySequence, "-lsqlite3", "-llibz", "-framework", "best", "-Ilfoo", "-L", "lbar", .end])
+            XCTAssertMatch(linkExe, [.anySequence, "-lsqlite3", "-framework", "best", "-Ilfoo", "-L", "lbar", .end])
+
+            // With dynamic linking, the libz link stays against the 
+            // dependency, the exe does not need to be linked against it.
+            let linkDep = try result.buildProduct(for: "Dep").linkArguments()
+            XCTAssertMatch(linkDep, [.anySequence, "-llibz", .end])
         }
 
         do {
@@ -2243,7 +2255,12 @@ final class BuildPlanTests: XCTestCase {
             XCTAssertMatch(exe, [.anySequence, "-DFOO", .end])
 
             let linkExe = try result.buildProduct(for: "exe").linkArguments()
-            XCTAssertMatch(linkExe, [.anySequence, "-lsqlite3", "-llibz", "-framework", "CoreData", "-framework", "best", "-Ilfoo", "-L", "lbar", .anySequence])
+            XCTAssertMatch(linkExe, [.anySequence, "-lsqlite3", "-framework", "CoreData", "-framework", "best", "-Ilfoo", "-L", "lbar", .anySequence])
+
+            // With dynamic linking, the libz link stays against the 
+            // dependency, the exe does not need to be linked against it.
+            let linkDep = try result.buildProduct(for: "Dep").linkArguments()
+            XCTAssertMatch(linkDep, [.anySequence, "-llibz", .anySequence])
         }
     }
 

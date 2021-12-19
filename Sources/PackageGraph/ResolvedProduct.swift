@@ -69,6 +69,11 @@ public final class ResolvedProduct {
         let recursiveDependencies = try targets.lazy.flatMap { try $0.recursiveTargetDependencies() }
         return Array(Set(targets).union(recursiveDependencies))
     }
+    /// Returns the recursive product dependencies.
+    public func recursiveDependencies() throws -> [ResolvedProduct] {
+        let recursiveDependencies = try targets.lazy.flatMap { try $0.recursiveDependencies() }
+        return Array(Set([self]).union(recursiveDependencies.compactMap {$0.product}))
+    }
 }
 
 extension ResolvedProduct: Hashable {

@@ -1227,7 +1227,7 @@ public final class ProductBuildDescription {
 
         let containsSwiftTargets = product.containsSwiftTargets
 
-        print("Link: \(product.type) \(product.name)")
+        // print("Link: \(product.type) \(product.name)")
         switch product.type {
         case .library(.automatic):
             // throw InternalError("automatic library not supported 2")
@@ -1641,6 +1641,7 @@ public class BuildPlan {
         for product in graph.allProducts where 
             // product.type != .library(.automatic) && 
             // product.type != .library(.automatic) && 
+            product.targets[0].type != PackageModel.Target.Kind.systemModule &&
             product.type != .plugin {
 
             // Determine the appropriate tools version to use for the product.
@@ -1890,7 +1891,13 @@ public class BuildPlan {
                 // Add the dynamic products to array of libraries to link.
                 if product.type == .library(.dynamic) ||
                 product.type == .library(.automatic) {
-                    linkLibraries.append(product)
+                    // print("Adding linkLibraries: \(product) \(try! product.recursiveDependencies())")
+                    // if (product.targets.allSatisfy {$0.type != PackageModel.Target.Kind.systemModule}) {
+                        // linkLibraries.append(product)
+                    // }
+                    // linkLibraries.append(try! product.recursiveTargetDependencies())
+                    linkLibraries.append(contentsOf: try! product.recursiveDependencies())
+                    linkLibraries = linkLibraries.filter {$0.targets.allSatisfy {$0.type != PackageModel.Target.Kind.systemModule}}
                 }
             }
         }
