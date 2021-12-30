@@ -127,6 +127,9 @@ public struct BuildParameters: Encodable {
     /// Whether to use the explicit module build flow (with the integrated driver)
     public var useExplicitModuleBuild: Bool
 
+    /// Prefer dynamic linking
+    public var preferDynamic: Bool
+
     /// Whether to output a graphviz file visualization of the combined job graph for all targets
     public var printManifestGraphviz: Bool
 
@@ -194,6 +197,7 @@ public struct BuildParameters: Encodable {
         emitSwiftModuleSeparately: Bool = false,
         useIntegratedSwiftDriver: Bool = false,
         useExplicitModuleBuild: Bool = false,
+        preferDynamic: Bool = false,
         isXcodeBuildSystemEnabled: Bool = false,
         printManifestGraphviz: Bool = false,
         enableTestability: Bool? = nil,
@@ -223,6 +227,7 @@ public struct BuildParameters: Encodable {
         self.emitSwiftModuleSeparately = emitSwiftModuleSeparately
         self.useIntegratedSwiftDriver = useIntegratedSwiftDriver
         self.useExplicitModuleBuild = useExplicitModuleBuild
+        self.preferDynamic = preferDynamic
         self.isXcodeBuildSystemEnabled = isXcodeBuildSystemEnabled
         self.printManifestGraphviz = printManifestGraphviz
         // decide on testability based on debug/release config
@@ -295,9 +300,14 @@ public struct BuildParameters: Encodable {
             return RelativePath("lib\(product.name)\(triple.staticLibraryExtension)")
         case .library(.dynamic):
             return RelativePath("\(triple.dynamicLibraryPrefix)\(product.name)\(triple.dynamicLibraryExtension)")
-        case .library(.automatic), .plugin:
-            // fatalError()
-            return RelativePath("\(triple.dynamicLibraryPrefix)\(product.name)\(triple.dynamicLibraryExtension)")
+        case .library(.automatic):
+            if self.preferDynamic {
+                return RelativePath("\(triple.dynamicLibraryPrefix)\(product.name)\(triple.dynamicLibraryExtension)")
+            } else {
+                fatalError()
+            }
+        case .plugin:
+            fatalError()
         case .test:
             guard !triple.isWASI() else {
                 return RelativePath("\(product.name).wasm")

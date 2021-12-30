@@ -756,7 +756,6 @@ public final class SwiftTargetBuildDescription {
         args += stdlibArguments
         args += buildParameters.sanitizers.compileSwiftFlags()
         args += ["-parseable-output"]
-        // args += ["-emit-library"]
 
         // If we're compiling the main module of an executable other than the one that
         // implements a test suite, and if the package tools version indicates that we
@@ -830,10 +829,6 @@ public final class SwiftTargetBuildDescription {
 
         // FIXME: Do we always have a module?
         result.append("-emit-module")
-        // result.append("-emit-library")
-        // if target.c99name == "SwiftyTextTable" {
-        //     assert(false)
-        // }
         result.append("-emit-module-path")
         result.append(moduleOutputPath.pathString)
 
@@ -856,9 +851,6 @@ public final class SwiftTargetBuildDescription {
         result.append(buildParameters.buildPath.pathString)
 
         result += try self.compileArguments()
-
-        // print("Bar: \(result)")
-
         return result
      }
 
@@ -871,12 +863,9 @@ public final class SwiftTargetBuildDescription {
 
         result.append("-module-name")
         result.append(target.c99name)
-        // result.append("-emit-module")
-        result.append("-emit-library")
-        assert(false)
-
-        // result.append("-emit-module-path")
-        // result.append(moduleOutputPath.pathString)
+        result.append("-emit-module")
+        result.append("-emit-module-path")
+        result.append(moduleOutputPath.pathString)
         result += buildParameters.toolchain.extraSwiftCFlags
 
         result.append("-Xfrontend")
@@ -1177,7 +1166,7 @@ public final class ProductBuildDescription {
 
     /// Create a build description for a product.
     init(product: ResolvedProduct, toolsVersion: ToolsVersion, buildParameters: BuildParameters, fileSystem: FileSystem, observabilityScope: ObservabilityScope) {
-        // assert(product.type != .library(.automatic), "Automatic type libraries should not be described.")
+        assert(buildParameters.preferDynamic || product.type != .library(.automatic), "Automatic type libraries should not be described.")
         self.product = product
         self.toolsVersion = toolsVersion
         self.buildParameters = buildParameters
@@ -1230,11 +1219,15 @@ public final class ProductBuildDescription {
         // print("Link: \(product.type) \(product.name)")
         switch product.type {
         case .library(.automatic):
-            // throw InternalError("automatic library not supported 2")
-            args += ["-emit-library"]
-            if buildParameters.triple.isDarwin() {
-                let relativePath = "@rpath/\(buildParameters.binaryRelativePath(for: product).pathString)"
-                args += ["-Xlinker", "-install_name", "-Xlinker", relativePath]
+            if !buildParameters.preferDynamic {
+                throw InternalError("automatic library not supported 2")
+            } else {
+                // @@@ Duplicated code!
+                args += ["-emit-library"]
+                if buildParameters.triple.isDarwin() {
+                    let relativePath = "@rpath/\(buildParameters.binaryRelativePath(for: product).pathString)"
+                    args += ["-Xlinker", "-install_name", "-Xlinker", relativePath]
+                }
             }
         case .library(.static):
             // No arguments for static libraries.
@@ -1640,7 +1633,7 @@ public class BuildPlan {
         // for automatic libraries and plugins, because they don't produce any output.
         for product in graph.allProducts where 
             // product.type != .library(.automatic) && 
-            // product.type != .library(.automatic) && 
+            (buildParameters.preferDynamic || product.type != .library(.automatic)) && 
             product.targets[0].type != PackageModel.Target.Kind.systemModule &&
             product.type != .plugin {
 
@@ -1809,7 +1802,7 @@ public class BuildPlan {
         let nodes: [ResolvedTarget.Dependency] = product.targets.map { .target($0, conditions: []) }
         let allTargets = try topologicalSort(nodes, successors: { dependency in
             switch dependency {
-            // Include all the depenencies of a target.
+            // Include all the dependencies of a target.
             case .target(let target, _):
                 return target.dependencies.filter { $0.satisfies(self.buildEnvironment) }
 
@@ -1817,18 +1810,19 @@ public class BuildPlan {
             // need to statically link it or if it's a plugin.
             case .product(let product, _):
                 switch product.type {
-                case 
-                    // .library(.automatic), 
-                    .library(.static), .plugin:
+                case .library(.automatic):
+                    if buildParameters.preferDynamic {
+                        return []
+                    } else {
+                        return product.targets.map { .target($0, conditions: []) }
+                    }
+                case .library(.static), .plugin:
                     return product.targets.map { .target($0, conditions: []) }
-                case .library(.dynamic), .test, .executable, 
-                .library(.automatic), 
-                .snippet:
+                case .library(.dynamic), .test, .executable, .snippet:
                     return []
                 }
             }
         })
-        // print("computeDependencies: \(product) \(allTargets)")
 
         // Create empty arrays to collect our results.
         var linkLibraries = [ResolvedProduct]()
@@ -1861,7 +1855,6 @@ public class BuildPlan {
                     }
                 // Library targets should always be included.
                 case .library:
-                    // print("Adding \(target) as static target for \(product)")
                     staticTargets.append(target)
                 // Add system target to system targets array.
                 case .systemModule:
@@ -1890,12 +1883,11 @@ public class BuildPlan {
             case .product(let product, _):
                 // Add the dynamic products to array of libraries to link.
                 if product.type == .library(.dynamic) ||
-                product.type == .library(.automatic) {
+                (buildParameters.preferDynamic && product.type == .library(.automatic)) {
                     // print("Adding linkLibraries: \(product) \(try! product.recursiveDependencies())")
                     // if (product.targets.allSatisfy {$0.type != PackageModel.Target.Kind.systemModule}) {
                         // linkLibraries.append(product)
                     // }
-                    // linkLibraries.append(try! product.recursiveTargetDependencies())
                     linkLibraries.append(contentsOf: try! product.recursiveDependencies())
                     linkLibraries = linkLibraries.filter {$0.targets.allSatisfy {$0.type != PackageModel.Target.Kind.systemModule}}
                 }

@@ -317,6 +317,10 @@ public struct SwiftToolOptions: ParsableArguments {
         help: "Write the command graph for the build manifest as a graphviz file")
     var printManifestGraphviz: Bool = false
 
+    /// Prefer dynamic linking
+    @Flag(help: "Prefer dynamic linking")
+    var preferDynamic: Bool = false
+
     /// The build system to use.
     @Option(name: .customLong("build-system"))
     var _buildSystem: BuildSystemKind = .native

@@ -905,6 +905,7 @@ public class SwiftTool {
                 emitSwiftModuleSeparately: options.emitSwiftModuleSeparately,
                 useIntegratedSwiftDriver: options.useIntegratedSwiftDriver,
                 useExplicitModuleBuild: options.useExplicitModuleBuild,
+                preferDynamic: options.preferDynamic,
                 isXcodeBuildSystemEnabled: options.buildSystem == .xcode,
                 printManifestGraphviz: options.printManifestGraphviz,
                 forceTestDiscovery: options.enableTestDiscovery, // backwards compatibility, remove with --enable-test-discovery
