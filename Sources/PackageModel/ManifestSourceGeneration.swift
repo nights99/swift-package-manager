@@ -429,15 +429,15 @@ fileprivate extension SourceCodeFragment {
     init(from intent: TargetDescription.PluginCommandIntent) {
         switch intent {
         case .documentationGeneration:
-            self.init(enum: "documentationGeneration")
+            self.init(enum: "documentationGeneration", subnodes: [])
         case .sourceCodeFormatting:
-            self.init(enum: "sourceCodeFormatting")
+            self.init(enum: "sourceCodeFormatting", subnodes: [])
         case .custom(let verb, let description):
             let params = [
                 SourceCodeFragment(key: "verb", string: verb),
                 SourceCodeFragment(key: "description", string: description)
             ]
-            self.init(enum: "writeToPackageDirectory", subnodes: params)
+            self.init(enum: "custom", subnodes: params)
         }
     }
 

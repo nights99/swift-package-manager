@@ -27,7 +27,7 @@ public struct PackageManager {
         _ subset: BuildSubset,
         parameters: BuildParameters
     ) throws -> BuildResult {
-        // Ask the plugin host for symbol graph information for the target, and wait for a response.
+        // Ask the plugin host to build the specified products and targets, and wait for a response.
         // FIXME: We'll want to make this asynchronous when there is back deployment support for it.
         return try sendMessageAndWaitForReply(.buildOperationRequest(subset: subset, parameters: parameters)) {
             guard case .buildOperationResponse(let result) = $0 else { return nil }
@@ -76,12 +76,12 @@ public struct PackageManager {
     
     /// Represents an overall purpose of the build, which affects such things
     /// asoptimization and generation of debug symbols.
-    public enum BuildConfiguration: Encodable {
+    public enum BuildConfiguration: String, Encodable {
         case debug, release
     }
     
     /// Represents the amount of detail in a build log.
-    public enum BuildLogVerbosity: Encodable {
+    public enum BuildLogVerbosity: String, Encodable {
         case concise, verbose, debug
     }
     
@@ -108,7 +108,7 @@ public struct PackageManager {
             /// Represents the kind of artifact that was built. The specific file
             /// formats may vary from platform to platform — for example, on macOS
             /// a dynamic library may in fact be built as a framework.
-            public enum Kind: Decodable {
+            public enum Kind: String, Decodable {
                 case executable, dynamicLibrary, staticLibrary
             }
         }
@@ -127,7 +127,7 @@ public struct PackageManager {
         _ subset: TestSubset,
         parameters: TestParameters
     ) throws -> TestResult {
-        // Ask the plugin host for symbol graph information for the target, and wait for a response.
+        // Ask the plugin host to run the specified tests, and wait for a response.
         // FIXME: We'll want to make this asynchronous when there is back deployment support for it.
         return try sendMessageAndWaitForReply(.testOperationRequest(subset: subset, parameters: parameters)) {
             guard case .testOperationResponse(let result) = $0 else { return nil }
@@ -184,11 +184,11 @@ public struct PackageManager {
                 /// Represents the results of running a single test.
                 public struct Test: Decodable {
                     public var name: String
-                    public var outcome: Outcome
+                    public var result: Result
                     public var duration: Double
 
-                    /// Represents the outcome of running a single test.
-                    public enum Outcome: Decodable {
+                    /// Represents the result of running a single test.
+                    public enum Result: String, Decodable {
                         case succeeded, skipped, failed
                     }
                 }

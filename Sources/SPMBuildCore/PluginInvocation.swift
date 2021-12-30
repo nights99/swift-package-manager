@@ -20,7 +20,7 @@ public typealias Diagnostic = Basics.Diagnostic
 
 public enum PluginAction {
     case createBuildToolCommands(target: ResolvedTarget)
-    case performCommand(targets: [ResolvedTarget], arguments: [String], outputPath: AbsolutePath?)
+    case performCommand(targets: [ResolvedTarget], arguments: [String])
 }
 
 extension PluginTarget {
@@ -84,10 +84,8 @@ extension PluginTarget {
         }
 
         // Determine the set of writable directories.
-        var writableDirectories = [outputDirectory]
-        if case .performCommand(_, _, let outputPath) = action, let outputPath = outputPath {
-            writableDirectories.append(outputPath)
-        }
+        let writableDirectories = [outputDirectory]
+        // TODO: Here we will append any additional writable directories provided by the user.
         
         // Call the plugin script runner to actually invoke the plugin.
         scriptRunner.runPluginScript(
@@ -446,11 +444,11 @@ public enum PluginInvocationBuildSubset: Decodable {
 
 public struct PluginInvocationBuildParameters: Decodable {
     public var configuration: Configuration
-    public enum Configuration: Decodable {
+    public enum Configuration: String, Decodable {
         case debug, release
     }
     public var logging: LogVerbosity
-    public enum LogVerbosity: Decodable {
+    public enum LogVerbosity: String, Decodable {
         case concise, verbose, debug
     }
     public var otherCFlags: [String]
@@ -503,16 +501,14 @@ public struct PluginInvocationTestResult: Encodable {
             public var tests: [Test]
             public struct Test: Encodable {
                 public var name: String
-                public var output: String
-                public var status: Status
+                public var result: Result
                 public var duration: Double
-                public enum Status: String, CaseIterable, Encodable {
+                public enum Result: String, Encodable {
                     case succeeded, skipped, failed
                 }
-                public init(name: String, output: String, status: Status, duration: Double) {
+                public init(name: String, result: Result, duration: Double) {
                     self.name = name
-                    self.output = output
-                    self.status = status
+                    self.result = result
                     self.duration = duration
                 }
             }
@@ -577,7 +573,7 @@ public struct PluginScriptRunnerInput: Codable {
     /// the capabilities declared for the plugin.
     enum PluginAction: Codable {
         case createBuildToolCommands(targetId: Target.Id)
-        case performCommand(targetIds: [Target.Id], arguments: [String], outputPathId: Path.Id?)
+        case performCommand(targetIds: [Target.Id], arguments: [String])
     }
 
     /// A single absolute path in the wire structure, represented as a tuple
@@ -770,10 +766,9 @@ struct PluginScriptRunnerInputSerializer {
                 throw StringError("unexpectedly was unable to serialize target \(target)")
             }
             serializedPluginAction = .createBuildToolCommands(targetId: targetId)
-        case .performCommand(let targets, let arguments, let outputPath):
+        case .performCommand(let targets, let arguments):
             let targetIds = try targets.compactMap { try serialize(target: $0) }
-            let outputPathId = try outputPath.map{ try serialize(path: $0) }
-            serializedPluginAction = .performCommand(targetIds: targetIds, arguments: arguments, outputPathId: outputPathId)
+            serializedPluginAction = .performCommand(targetIds: targetIds, arguments: arguments)
         }
         return PluginScriptRunnerInput(
             paths: paths,

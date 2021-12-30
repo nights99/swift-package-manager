@@ -852,7 +852,7 @@ final class PackageToolTests: CommandsTestCase {
                     try execute("resolve", "bar")
                     XCTFail("This should have been an error")
                 } catch SwiftPMProductError.executionFailure(_, _, let stderr) {
-                    XCTAssertMatch(stderr, .prefix("error: edited dependency 'bar' can't be resolved"))
+                    XCTAssertMatch(stderr, .contains("error: edited dependency 'bar' can't be resolved"))
                 }
                 try execute("unedit", "bar")
             }
@@ -979,7 +979,7 @@ final class PackageToolTests: CommandsTestCase {
                     try block()
                     XCTFail()
                 } catch SwiftPMProductError.executionFailure(_, _, let stderrOutput) {
-                    XCTAssertEqual(stderrOutput, stderr)
+                    XCTAssertMatch(stderrOutput, .contains(stderr))
                 } catch {
                     XCTFail("unexpected error: \(error)")
                 }
@@ -1249,8 +1249,7 @@ final class PackageToolTests: CommandsTestCase {
                     func performCommand(
                         context: PluginContext,
                         targets: [Target],
-                        arguments: [String],
-                        outputPath: Path?
+                        arguments: [String]
                     ) throws {
                         print("This is MyCommandPlugin.")
 
@@ -1273,11 +1272,6 @@ final class PackageToolTests: CommandsTestCase {
                         print("Looking for swiftc...")
                         let swiftc = try context.tool(named: "swiftc")
                         print("... found it at \\(swiftc.path)")
-
-                        // Check the output path.
-                        if let outputPath = outputPath {
-                            print("Got output path \\(outputPath.string).")
-                        }
                     }
                 }
                 """
@@ -1324,21 +1318,14 @@ final class PackageToolTests: CommandsTestCase {
 
             // Invoke it, and check the results.
             do {
-                let result = try SwiftPMProduct.SwiftPackage.executeProcess(
-                    ["plugin", "--output", "/abc/def", "mycmd"],
-                    packagePath: packageDir,
-                    env: ["SWIFTPM_ENABLE_COMMAND_PLUGINS": "1"])
+                let result = try SwiftPMProduct.SwiftPackage.executeProcess(["plugin", "mycmd"], packagePath: packageDir, env: ["SWIFTPM_ENABLE_COMMAND_PLUGINS": "1"])
                 XCTAssertEqual(result.exitStatus, .terminated(code: 0))
                 XCTAssert(try result.utf8Output().contains("This is MyCommandPlugin."))
-                XCTAssert(try result.utf8Output().contains("Got output path /abc/def."))
             }
 
             // Testing listing the available command plugins.
             do {
-                let result = try SwiftPMProduct.SwiftPackage.executeProcess(
-                    ["plugin", "--list"],
-                    packagePath: packageDir,
-                    env: ["SWIFTPM_ENABLE_COMMAND_PLUGINS": "1"])
+                let result = try SwiftPMProduct.SwiftPackage.executeProcess(["plugin", "--list"], packagePath: packageDir, env: ["SWIFTPM_ENABLE_COMMAND_PLUGINS": "1"])
                 XCTAssertEqual(result.exitStatus, .terminated(code: 0))
                 XCTAssert(try result.utf8Output().contains("‘mycmd’ (plugin ‘MyPlugin’ in package ‘MyPackage’)"))
             }

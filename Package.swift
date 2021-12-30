@@ -54,7 +54,7 @@ automatic linking type with `-auto` suffix appended to product's name.
 let autoProducts = [swiftPMProduct, swiftPMDataModelProduct]
 
 let useSwiftCryptoV2 = ProcessInfo.processInfo.environment["SWIFTPM_USE_SWIFT_CRYPTO_V2"] != nil
-let minimumCryptoVersion: Version = useSwiftCryptoV2 ? "2.0.2" : "1.1.4"
+let minimumCryptoVersion: Version = useSwiftCryptoV2 ? "2.0.3" : "1.1.4"
 var swiftSettings: [SwiftSetting] = []
 if useSwiftCryptoV2 {
     swiftSettings.append(.define("CRYPTO_v2"))
@@ -139,6 +139,7 @@ let package = Package(
             name: "Basics",
             dependencies: [
                 .product(name: "SwiftToolsSupport-auto", package: "swift-tools-support-core"),
+                .product(name: "SystemPackage", package: "swift-system"),
             ],
             exclude: ["CMakeLists.txt"]
         ),
@@ -190,8 +191,7 @@ let package = Package(
             name: "PackageLoading",
             dependencies: [
                 "Basics",
-                "PackageModel",
-                "SourceControl"
+                "PackageModel"
             ],
             exclude: ["CMakeLists.txt", "README.md"]
         ),
@@ -571,6 +571,7 @@ if ProcessInfo.processInfo.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
         .package(url: "https://github.com/apple/swift-argument-parser.git", .upToNextMinor(from: "1.0.1")),
         .package(url: "https://github.com/apple/swift-driver.git", .branch(relatedDependenciesBranch)),
         .package(url: "https://github.com/apple/swift-crypto.git", .upToNextMinor(from: minimumCryptoVersion)),
+        .package(url: "https://github.com/apple/swift-system.git", .upToNextMinor(from: "1.1.1")),
     ]
 } else {
     package.dependencies += [
@@ -578,5 +579,6 @@ if ProcessInfo.processInfo.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
         .package(path: "../swift-argument-parser"),
         .package(path: "../swift-driver"),
         .package(path: "../swift-crypto"),
+        .package(path: "../swift-system"),
     ]
 }
